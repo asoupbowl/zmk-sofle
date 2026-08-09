@@ -1,3 +1,3 @@
-# Build trigger
+# Codex firmware validation
 
-This file triggers the initial GitHub Actions validation for the Codex usage firmware branch.
+Rebuild requested after moving the Codex configuration into the standard Eyelash Sofle shield files.
