@@ -7,7 +7,6 @@ import argparse
 import errno
 import glob
 import json
-import math
 import os
 import selectors
 import shutil
@@ -18,13 +17,12 @@ import termios
 import time
 import tty
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 
 UNKNOWN_PERCENT = 0xFF
-UNKNOWN_MINUTES = 0xFFFF
-MAX_RESET_MINUTES = 0xFFFE
 PROBE = b"CX1?\n"
 
 
@@ -37,10 +35,11 @@ def crc8(data: bytes) -> int:
     return value
 
 
-def _percent(window: dict[str, Any] | None) -> int:
+def _remaining_percent(window: dict[str, Any] | None) -> int:
     if not window or window.get("usedPercent") is None:
         return UNKNOWN_PERCENT
-    return max(0, min(100, int(window["usedPercent"])))
+    used = max(0, min(100, int(window["usedPercent"])))
+    return 100 - used
 
 
 def _duration_hours(window: dict[str, Any] | None) -> int:
@@ -49,19 +48,18 @@ def _duration_hours(window: dict[str, Any] | None) -> int:
     return max(0, min(255, round(int(window["windowDurationMins"]) / 60)))
 
 
-def _reset_minutes(window: dict[str, Any] | None, now: float) -> int:
+def _reset_parts(window: dict[str, Any] | None) -> tuple[int, int, int, int]:
     if not window or window.get("resetsAt") is None:
-        return UNKNOWN_MINUTES
-    remaining = math.ceil((int(window["resetsAt"]) - now) / 60)
-    return max(0, min(MAX_RESET_MINUTES, remaining))
+        return 0, 0, 0, 0
+    reset = datetime.fromtimestamp(int(window["resetsAt"]))
+    return reset.month, reset.day, reset.hour, reset.minute
 
 
 @dataclass(frozen=True)
 class PackedSnapshot:
     param1: int
     param2: int
-    primary_used: int
-    secondary_used: int
+    remaining_percent: int
 
     def wire_line(self) -> bytes:
         payload = f"CX1,{self.param1:08X},{self.param2:08X}".encode("ascii")
@@ -69,19 +67,12 @@ class PackedSnapshot:
 
 
 def pack_snapshot(snapshot: dict[str, Any], now: float | None = None) -> PackedSnapshot:
-    now = time.time() if now is None else now
     primary = snapshot.get("primary")
-    secondary = snapshot.get("secondary")
-    primary_used = _percent(primary)
-    secondary_used = _percent(secondary)
-    param1 = (
-        primary_used
-        | (secondary_used << 8)
-        | (_duration_hours(primary) << 16)
-        | (_duration_hours(secondary) << 24)
-    )
-    param2 = _reset_minutes(primary, now) | (_reset_minutes(secondary, now) << 16)
-    return PackedSnapshot(param1, param2, primary_used, secondary_used)
+    remaining = _remaining_percent(primary)
+    month, day, hour, minute = _reset_parts(primary)
+    param1 = remaining | (_duration_hours(primary) << 8)
+    param2 = month | (day << 8) | (hour << 16) | (minute << 24)
+    return PackedSnapshot(param1, param2, remaining)
 
 
 def find_codex() -> str:
@@ -289,10 +280,14 @@ def run(args: argparse.Namespace) -> int:
                     print(line.decode("ascii").rstrip())
                 else:
                     destination, reply = serial.write(line)
-                secondary = "-" if packed.secondary_used == UNKNOWN_PERCENT else f"{packed.secondary_used}%"
+                remaining = (
+                    "-"
+                    if packed.remaining_percent == UNKNOWN_PERCENT
+                    else f"{packed.remaining_percent}%"
+                )
                 print(
                     f"[{time.strftime('%F %T')}] sent to {destination}: "
-                    f"primary={packed.primary_used}% secondary={secondary} keyboard={reply}",
+                    f"remaining={remaining} keyboard={reply}",
                     flush=True,
                 )
             except Exception as exc:

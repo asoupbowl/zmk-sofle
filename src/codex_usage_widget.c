@@ -33,10 +33,12 @@ struct codex_usage_widget {
 static struct codex_usage_widget widget;
 static lv_color_t rotate_buf[TILE_SIZE * TILE_SIZE];
 
-struct codex_footer_state {
+struct codex_header_state {
     uint8_t battery;
     bool connected;
 };
+
+static struct codex_header_state header_state;
 
 static void init_label(lv_draw_label_dsc_t *dsc, const lv_font_t *font,
                        lv_text_align_t align) {
@@ -74,100 +76,109 @@ static void format_window(char *out, size_t size, uint8_t hours) {
     }
 }
 
-static void format_reset(char *out, size_t size, uint16_t minutes) {
-    if (minutes == ZMK_CODEX_USAGE_UNKNOWN_MINUTES) {
-        snprintf(out, size, "R --");
-    } else if (minutes < 60) {
-        snprintf(out, size, "R %uM", minutes);
-    } else if (minutes < 1440) {
-        snprintf(out, size, "R %uH", (minutes + 30) / 60);
-    } else {
-        snprintf(out, size, "R %uD", (minutes + 720) / 1440);
-    }
-}
-
-static void draw_quota(lv_obj_t *canvas, lv_color_t buffer[], uint8_t hours, uint8_t used,
-                       uint16_t reset_minutes) {
+static void draw_usage(struct zmk_codex_usage_state state) {
     lv_draw_rect_dsc_t bg;
     lv_draw_rect_dsc_t fg;
     lv_draw_label_dsc_t small;
     lv_draw_label_dsc_t large;
+    lv_draw_label_dsc_t icon;
     init_rect(&bg, UI_BG);
     init_rect(&fg, UI_FG);
     init_label(&small, &lv_font_unscii_8, LV_TEXT_ALIGN_CENTER);
     init_label(&large, &lv_font_montserrat_18, LV_TEXT_ALIGN_CENTER);
+    init_label(&icon, &lv_font_montserrat_16, LV_TEXT_ALIGN_LEFT);
 
-    lv_canvas_draw_rect(canvas, 0, 0, TILE_SIZE, TILE_SIZE, &bg);
+    lv_canvas_draw_rect(widget.primary, 0, 0, TILE_SIZE, TILE_SIZE, &bg);
 
     char window[5];
     char percent[8];
-    char reset[8];
-    format_window(window, sizeof(window), hours);
-    format_reset(reset, sizeof(reset), reset_minutes);
-    if (used == ZMK_CODEX_USAGE_UNKNOWN_PERCENT) {
+    format_window(window, sizeof(window), state.duration_hours);
+    uint8_t remaining = state.remaining_percent;
+    if (remaining == ZMK_CODEX_USAGE_UNKNOWN_PERCENT) {
         snprintf(percent, sizeof(percent), "--%%");
-        used = 0;
+        remaining = 0;
     } else {
-        snprintf(percent, sizeof(percent), "%u%%", used);
+        snprintf(percent, sizeof(percent), "%u%%", remaining);
     }
 
-    lv_canvas_draw_text(canvas, 0, 2, TILE_SIZE, &small, window);
-    lv_canvas_draw_text(canvas, 0, 15, TILE_SIZE, &large, percent);
-    lv_canvas_draw_rect(canvas, 4, 42, 60, 8, &fg);
-    lv_canvas_draw_rect(canvas, 5, 43, 58, 6, &bg);
-    if (used > 0) {
-        uint8_t width = (58 * MIN(used, 100)) / 100;
-        lv_canvas_draw_rect(canvas, 5, 43, width, 6, &fg);
+    lv_canvas_draw_text(widget.primary, 0, 0, 16, &icon,
+                        header_state.connected ? LV_SYMBOL_WIFI : LV_SYMBOL_CLOSE);
+    lv_canvas_draw_text(widget.primary, 20, 3, 28, &small, window);
+
+    lv_canvas_draw_rect(widget.primary, 51, 4, 13, 9, &fg);
+    lv_canvas_draw_rect(widget.primary, 52, 5, 11, 7, &bg);
+    lv_canvas_draw_rect(widget.primary, 49, 6, 2, 3, &fg);
+    uint8_t battery_width = (11 * MIN(header_state.battery, 100)) / 100;
+    if (battery_width > 0) {
+        lv_canvas_draw_rect(widget.primary, 52, 5, battery_width, 7, &fg);
     }
-    lv_canvas_draw_text(canvas, 0, 55, TILE_SIZE, &small, reset);
-    rotate_canvas(canvas, buffer);
+
+    lv_canvas_draw_text(widget.primary, 0, 17, TILE_SIZE, &large, percent);
+    lv_canvas_draw_rect(widget.primary, 4, 42, 60, 8, &fg);
+    lv_canvas_draw_rect(widget.primary, 5, 43, 58, 6, &bg);
+    if (remaining > 0) {
+        uint8_t width = (58 * MIN(remaining, 100)) / 100;
+        lv_canvas_draw_rect(widget.primary, 5, 43, width, 6, &fg);
+    }
+    lv_canvas_draw_text(widget.primary, 0, 55, TILE_SIZE, &small, "LEFT");
+    rotate_canvas(widget.primary, widget.primary_buf);
 }
 
-static void draw_footer(struct codex_footer_state state) {
+static void draw_reset(struct zmk_codex_usage_state state) {
     lv_draw_rect_dsc_t bg;
-    lv_draw_rect_dsc_t fg;
-    lv_draw_label_dsc_t icon;
     lv_draw_label_dsc_t small;
+    lv_draw_label_dsc_t large;
     init_rect(&bg, UI_BG);
-    init_rect(&fg, UI_FG);
-    init_label(&icon, &lv_font_montserrat_16, LV_TEXT_ALIGN_LEFT);
-    init_label(&small, &lv_font_unscii_8, LV_TEXT_ALIGN_LEFT);
-    lv_canvas_draw_rect(widget.footer, 0, 0, TILE_SIZE, TILE_SIZE, &bg);
+    init_label(&small, &lv_font_unscii_8, LV_TEXT_ALIGN_CENTER);
+    init_label(&large, &lv_font_montserrat_18, LV_TEXT_ALIGN_CENTER);
+    lv_canvas_draw_rect(widget.secondary, 0, 0, TILE_SIZE, TILE_SIZE, &bg);
 
-    lv_canvas_draw_text(widget.footer, 0, 1, 16, &icon,
-                        state.connected ? LV_SYMBOL_WIFI : LV_SYMBOL_CLOSE);
-
-    lv_canvas_draw_rect(widget.footer, 16, 6, 13, 9, &fg);
-    lv_canvas_draw_rect(widget.footer, 17, 7, 11, 7, &bg);
-    lv_canvas_draw_rect(widget.footer, 29, 9, 2, 3, &fg);
-    uint8_t battery_width = (11 * MIN(state.battery, 100)) / 100;
-    if (battery_width > 0) {
-        lv_canvas_draw_rect(widget.footer, 17, 7, battery_width, 7, &fg);
+    char date[8];
+    char time[8];
+    if (state.reset_month == 0 || state.reset_day == 0) {
+        snprintf(date, sizeof(date), "--/--");
+        snprintf(time, sizeof(time), "--:--");
+    } else {
+        snprintf(date, sizeof(date), "%02u/%02u", state.reset_month, state.reset_day);
+        snprintf(time, sizeof(time), "%02u:%02u", state.reset_hour, state.reset_minute);
     }
 
-    lv_canvas_draw_text(widget.footer, 28, 5, 40, &small, "CODEX");
+    lv_canvas_draw_text(widget.secondary, 0, 3, TILE_SIZE, &small, "RESET");
+    lv_canvas_draw_text(widget.secondary, 0, 19, TILE_SIZE, &large, date);
+    lv_canvas_draw_text(widget.secondary, 0, 51, TILE_SIZE, &small, time);
+    rotate_canvas(widget.secondary, widget.secondary_buf);
+}
+
+static void draw_footer(void) {
+    lv_draw_rect_dsc_t bg;
+    lv_draw_label_dsc_t title;
+    init_rect(&bg, UI_BG);
+    init_label(&title, &lv_font_montserrat_14, LV_TEXT_ALIGN_CENTER);
+    lv_canvas_draw_rect(widget.footer, 0, 0, TILE_SIZE, TILE_SIZE, &bg);
+    lv_canvas_draw_text(widget.footer, 0, 1, TILE_SIZE, &title, "CODEX");
     rotate_canvas(widget.footer, widget.footer_buf);
 }
 
-static void footer_update_cb(struct codex_footer_state state) { draw_footer(state); }
+static void header_update_cb(struct codex_header_state state) {
+    header_state = state;
+    draw_usage(zmk_codex_usage_get_state());
+}
 
-static struct codex_footer_state footer_get_state(const zmk_event_t *eh) {
-    return (struct codex_footer_state){
+static struct codex_header_state header_get_state(const zmk_event_t *eh) {
+    return (struct codex_header_state){
         .battery = zmk_battery_state_of_charge(),
         .connected = zmk_split_bt_peripheral_is_connected(),
     };
 }
 
-ZMK_DISPLAY_WIDGET_LISTENER(widget_codex_footer, struct codex_footer_state, footer_update_cb,
-                            footer_get_state)
-ZMK_SUBSCRIPTION(widget_codex_footer, zmk_battery_state_changed);
-ZMK_SUBSCRIPTION(widget_codex_footer, zmk_split_peripheral_status_changed);
+ZMK_DISPLAY_WIDGET_LISTENER(widget_codex_header, struct codex_header_state, header_update_cb,
+                            header_get_state)
+ZMK_SUBSCRIPTION(widget_codex_header, zmk_battery_state_changed);
+ZMK_SUBSCRIPTION(widget_codex_header, zmk_split_peripheral_status_changed);
 
 static void update_widget(struct zmk_codex_usage_state state) {
-    draw_quota(widget.primary, widget.primary_buf, state.primary_duration_hours,
-               state.primary_used, state.primary_reset_minutes);
-    draw_quota(widget.secondary, widget.secondary_buf, state.secondary_duration_hours,
-               state.secondary_used, state.secondary_reset_minutes);
+    draw_usage(state);
+    draw_reset(state);
 }
 
 static void widget_update_cb(struct zmk_codex_usage_state state) { update_widget(state); }
@@ -202,7 +213,8 @@ int zmk_codex_usage_widget_init(lv_obj_t *parent) {
     lv_canvas_set_buffer(widget.footer, widget.footer_buf, TILE_SIZE, TILE_SIZE,
                          LV_IMG_CF_TRUE_COLOR);
 
-    widget_codex_footer_init();
+    draw_footer();
+    widget_codex_header_init();
     widget_codex_usage_init();
     return 0;
 }

@@ -33,7 +33,7 @@
 
 本 fork 为 Eyelash Sofle 的右侧 nice!view 增加 Codex 用量页面：
 
-- 显示 Codex 短周期与长周期的已用百分比、进度条和重置倒计时。
+- 与 Codex 桌面端保持同一数据维度：显示主配额的剩余百分比、窗口、进度条和本地重置日期/时间。
 - 左手保留 ZMK/DYA Studio，并新增一个独立 USB CDC 通道接收 Codex 快照。
 - 左手经 ZMK 蓝牙分体协议把快照转发给右手；账号凭据不会进入键盘。
 - 电脑端桥接程序只调用本机 Codex app-server，默认每 60 秒刷新。

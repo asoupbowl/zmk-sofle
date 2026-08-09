@@ -28,29 +28,29 @@ class BridgeTests(unittest.TestCase):
     def test_crc_reference(self):
         self.assertEqual(bridge.crc8(b"123456789"), 0xF4)
 
-    def test_packs_two_windows(self):
+    def test_packs_desktop_quota_dimensions(self):
+        reset = bridge.datetime(2026, 8, 16, 9, 51).timestamp()
         snapshot = {
-            "primary": {"usedPercent": 23, "windowDurationMins": 300, "resetsAt": 4600},
-            "secondary": {"usedPercent": 41, "windowDurationMins": 10080, "resetsAt": 87400},
+            "primary": {"usedPercent": 23, "windowDurationMins": 10080, "resetsAt": reset},
         }
-        packed = bridge.pack_snapshot(snapshot, now=1000)
-        self.assertEqual(packed.param1, 23 | (41 << 8) | (5 << 16) | (168 << 24))
-        self.assertEqual(packed.param2, 60 | (1440 << 16))
+        packed = bridge.pack_snapshot(snapshot)
+        self.assertEqual(packed.remaining_percent, 77)
+        self.assertEqual(packed.param1, 77 | (168 << 8))
+        self.assertEqual(packed.param2, 8 | (16 << 8) | (9 << 16) | (51 << 24))
         self.assertRegex(packed.wire_line().decode(), r"^CX1,[0-9A-F]{8},[0-9A-F]{8}\*[0-9A-F]{2}\n$")
 
-    def test_missing_secondary_is_encoded_as_unknown(self):
+    def test_missing_reset_is_encoded_as_zero(self):
         packed = bridge.pack_snapshot(
-            {"primary": {"usedPercent": 0, "windowDurationMins": 10080, "resetsAt": 1000}},
-            now=1000,
+            {"primary": {"usedPercent": 0, "windowDurationMins": 10080}},
         )
-        self.assertEqual(packed.secondary_used, 0xFF)
-        self.assertEqual((packed.param2 >> 16) & 0xFFFF, 0xFFFF)
+        self.assertEqual(packed.remaining_percent, 100)
+        self.assertEqual(packed.param2, 0)
 
     def test_percent_is_clamped(self):
         packed = bridge.pack_snapshot(
-            {"primary": {"usedPercent": 145, "windowDurationMins": 300}}, now=1000
+            {"primary": {"usedPercent": 145, "windowDurationMins": 300}}
         )
-        self.assertEqual(packed.primary_used, 100)
+        self.assertEqual(packed.remaining_percent, 0)
 
 
 if __name__ == "__main__":
