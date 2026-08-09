@@ -11,7 +11,9 @@
 #include <zmk/events/battery_state_changed.h>
 #include <zmk/events/codex_usage_changed.h>
 #include <zmk/events/split_peripheral_status_changed.h>
+#include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/split/bluetooth/peripheral.h>
+#include <zmk/usb.h>
 
 #define TILE_SIZE 68
 
@@ -33,9 +35,12 @@ struct codex_usage_widget {
 static struct codex_usage_widget widget;
 static lv_color_t rotate_buf[TILE_SIZE * TILE_SIZE];
 
+LV_IMG_DECLARE(codex_bolt);
+
 struct codex_header_state {
     uint8_t battery;
     bool connected;
+    bool charging;
 };
 
 static struct codex_header_state header_state;
@@ -76,6 +81,26 @@ static void format_window(char *out, size_t size, uint8_t hours) {
     }
 }
 
+static void draw_native_battery(lv_obj_t *canvas) {
+    lv_draw_rect_dsc_t bg;
+    lv_draw_rect_dsc_t fg;
+    init_rect(&bg, UI_BG);
+    init_rect(&fg, UI_FG);
+
+    /* Keep the stock nice!view peripheral battery geometry and fill calculation. */
+    lv_canvas_draw_rect(canvas, 0, 2, 29, 12, &fg);
+    lv_canvas_draw_rect(canvas, 1, 3, 27, 10, &bg);
+    lv_canvas_draw_rect(canvas, 2, 4, (MIN(header_state.battery, 100) + 2) / 4, 8, &fg);
+    lv_canvas_draw_rect(canvas, 30, 5, 3, 6, &fg);
+    lv_canvas_draw_rect(canvas, 31, 6, 1, 4, &bg);
+
+    if (header_state.charging) {
+        lv_draw_img_dsc_t image;
+        lv_draw_img_dsc_init(&image);
+        lv_canvas_draw_img(canvas, 9, -1, &codex_bolt, &image);
+    }
+}
+
 static void draw_usage(struct zmk_codex_usage_state state) {
     lv_draw_rect_dsc_t bg;
     lv_draw_rect_dsc_t fg;
@@ -86,13 +111,15 @@ static void draw_usage(struct zmk_codex_usage_state state) {
     init_rect(&fg, UI_FG);
     init_label(&small, &lv_font_unscii_8, LV_TEXT_ALIGN_CENTER);
     init_label(&large, &lv_font_montserrat_18, LV_TEXT_ALIGN_CENTER);
-    init_label(&icon, &lv_font_montserrat_16, LV_TEXT_ALIGN_LEFT);
+    init_label(&icon, &lv_font_montserrat_16, LV_TEXT_ALIGN_RIGHT);
 
     lv_canvas_draw_rect(widget.primary, 0, 0, TILE_SIZE, TILE_SIZE, &bg);
 
     char window[5];
     char percent[8];
+    char period[16];
     format_window(window, sizeof(window), state.duration_hours);
+    snprintf(period, sizeof(period), "LEFT  %s", window);
     uint8_t remaining = state.remaining_percent;
     if (remaining == ZMK_CODEX_USAGE_UNKNOWN_PERCENT) {
         snprintf(percent, sizeof(percent), "--%%");
@@ -101,17 +128,9 @@ static void draw_usage(struct zmk_codex_usage_state state) {
         snprintf(percent, sizeof(percent), "%u%%", remaining);
     }
 
-    lv_canvas_draw_text(widget.primary, 0, 0, 16, &icon,
+    draw_native_battery(widget.primary);
+    lv_canvas_draw_text(widget.primary, 0, 0, TILE_SIZE, &icon,
                         header_state.connected ? LV_SYMBOL_WIFI : LV_SYMBOL_CLOSE);
-    lv_canvas_draw_text(widget.primary, 20, 3, 28, &small, window);
-
-    lv_canvas_draw_rect(widget.primary, 51, 4, 13, 9, &fg);
-    lv_canvas_draw_rect(widget.primary, 52, 5, 11, 7, &bg);
-    lv_canvas_draw_rect(widget.primary, 49, 6, 2, 3, &fg);
-    uint8_t battery_width = (11 * MIN(header_state.battery, 100)) / 100;
-    if (battery_width > 0) {
-        lv_canvas_draw_rect(widget.primary, 52, 5, battery_width, 7, &fg);
-    }
 
     lv_canvas_draw_text(widget.primary, 0, 17, TILE_SIZE, &large, percent);
     lv_canvas_draw_rect(widget.primary, 4, 42, 60, 8, &fg);
@@ -120,7 +139,7 @@ static void draw_usage(struct zmk_codex_usage_state state) {
         uint8_t width = (58 * MIN(remaining, 100)) / 100;
         lv_canvas_draw_rect(widget.primary, 5, 43, width, 6, &fg);
     }
-    lv_canvas_draw_text(widget.primary, 0, 55, TILE_SIZE, &small, "LEFT");
+    lv_canvas_draw_text(widget.primary, 0, 55, TILE_SIZE, &small, period);
     rotate_canvas(widget.primary, widget.primary_buf);
 }
 
@@ -168,6 +187,9 @@ static struct codex_header_state header_get_state(const zmk_event_t *eh) {
     return (struct codex_header_state){
         .battery = zmk_battery_state_of_charge(),
         .connected = zmk_split_bt_peripheral_is_connected(),
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+        .charging = zmk_usb_is_powered(),
+#endif
     };
 }
 
@@ -175,6 +197,9 @@ ZMK_DISPLAY_WIDGET_LISTENER(widget_codex_header, struct codex_header_state, head
                             header_get_state)
 ZMK_SUBSCRIPTION(widget_codex_header, zmk_battery_state_changed);
 ZMK_SUBSCRIPTION(widget_codex_header, zmk_split_peripheral_status_changed);
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+ZMK_SUBSCRIPTION(widget_codex_header, zmk_usb_conn_state_changed);
+#endif
 
 static void update_widget(struct zmk_codex_usage_state state) {
     draw_usage(state);

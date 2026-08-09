@@ -8,6 +8,7 @@ if(CONFIG_ZMK_CODEX_USAGE)
   )
   target_sources_ifdef(CONFIG_ZMK_CODEX_USAGE_HOST_UART app PRIVATE src/host_uart.c)
   target_sources_ifdef(CONFIG_ZMK_CODEX_USAGE_STATUS_SCREEN app PRIVATE
+    src/codex_bolt.c
     src/codex_usage_widget.c
     src/status_screen.c
   )

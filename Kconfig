@@ -27,6 +27,7 @@ config ZMK_CODEX_USAGE_STATUS_SCREEN
     bool "Use the Codex usage status screen"
     depends on ZMK_DISPLAY
     select LV_USE_CANVAS
+    select LV_USE_IMG
     select LV_FONT_MONTSERRAT_18
     select LV_FONT_MONTSERRAT_16
     select LV_FONT_MONTSERRAT_14
