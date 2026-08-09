@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+
+description: Receive a packed Codex usage snapshot
+
+compatible: "zmk,behavior-codex-usage"
+
+include: two_param.yaml

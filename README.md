@@ -29,3 +29,33 @@
 
 ![Sofle键位图](keymap-drawer/eyelash_sofle.svg)
 
+## Codex 用量右屏（本 fork）
+
+本 fork 为 Eyelash Sofle 的右侧 nice!view 增加 Codex 用量页面：
+
+- 显示 Codex 短周期与长周期的已用百分比、进度条和重置倒计时。
+- 左手保留 ZMK/DYA Studio，并新增一个独立 USB CDC 通道接收 Codex 快照。
+- 左手经 ZMK 蓝牙分体协议把快照转发给右手；账号凭据不会进入键盘。
+- 电脑端桥接程序只调用本机 Codex app-server，默认每 60 秒刷新。
+
+刷入本 fork 生成的左右固件后，可先运行一次验证：
+
+```sh
+python3 host/codex_usage_bridge.py --once
+```
+
+仅检查 Codex 数据而不访问键盘：
+
+```sh
+python3 host/codex_usage_bridge.py --once --dry-run
+```
+
+桥接程序会用 `CX1?` 握手自动识别专用串口，不会把数据误发给 ZMK Studio 通道。
+macOS 登录自启动模板位于
+`macos/com.openai.eyelash-sofle-codex-usage.plist.template`。
+
+测试：
+
+```sh
+python3 -m unittest discover -s tests -v
+```

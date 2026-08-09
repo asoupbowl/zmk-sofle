@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+
+menuconfig ZMK_CODEX_USAGE
+    bool "Codex usage display"
+    depends on ZMK_SPLIT
+    help
+      Receive Codex rate-limit snapshots from the host and show them on the
+      right-hand nice!view display.
+
+if ZMK_CODEX_USAGE
+
+module = ZMK_CODEX_USAGE
+module-str = zmk_codex_usage
+source "subsys/logging/Kconfig.template.log_config"
+
+config ZMK_CODEX_USAGE_HOST_UART
+    bool "Receive snapshots over a dedicated USB CDC channel"
+    depends on ZMK_SPLIT_ROLE_CENTRAL
+    select SERIAL
+    select UART_INTERRUPT_DRIVEN
+    help
+      Parse CX1 frames from the zmk,codex-usage-uart chosen device and forward
+      them to split peripheral 0.
+
+config ZMK_CODEX_USAGE_STATUS_SCREEN
+    bool "Use the Codex usage status screen"
+    depends on ZMK_DISPLAY
+    select LV_USE_CANVAS
+    select LV_FONT_MONTSERRAT_18
+    select LV_FONT_MONTSERRAT_14
+    select LV_FONT_UNSCII_8
+    help
+      Replace the right-hand nice!view wallpaper with a vertical Codex quota
+      screen.
+
+endif
