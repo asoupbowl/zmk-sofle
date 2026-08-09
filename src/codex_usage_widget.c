@@ -4,10 +4,14 @@
 #include <string.h>
 #include <lvgl.h>
 #include <zephyr/kernel.h>
+#include <zmk/battery.h>
 #include <zmk/codex_usage/state.h>
 #include <zmk/display.h>
 #include <zmk/event_manager.h>
+#include <zmk/events/battery_state_changed.h>
 #include <zmk/events/codex_usage_changed.h>
+#include <zmk/events/split_peripheral_status_changed.h>
+#include <zmk/split/bluetooth/peripheral.h>
 
 #define TILE_SIZE 68
 
@@ -28,6 +32,11 @@ struct codex_usage_widget {
 
 static struct codex_usage_widget widget;
 static lv_color_t rotate_buf[TILE_SIZE * TILE_SIZE];
+
+struct codex_footer_state {
+    uint8_t battery;
+    bool connected;
+};
 
 static void init_label(lv_draw_label_dsc_t *dsc, const lv_font_t *font,
                        lv_text_align_t align) {
@@ -114,15 +123,39 @@ static void draw_quota(lv_obj_t *canvas, lv_color_t buffer[], uint8_t hours, uin
     rotate_canvas(canvas, buffer);
 }
 
-static void draw_footer(void) {
+static void draw_footer(struct codex_footer_state state) {
     lv_draw_rect_dsc_t bg;
     lv_draw_label_dsc_t title;
+    lv_draw_label_dsc_t icon;
+    lv_draw_label_dsc_t small;
     init_rect(&bg, UI_BG);
     init_label(&title, &lv_font_montserrat_14, LV_TEXT_ALIGN_CENTER);
+    init_label(&icon, &lv_font_montserrat_16, LV_TEXT_ALIGN_LEFT);
+    init_label(&small, &lv_font_unscii_8, LV_TEXT_ALIGN_RIGHT);
     lv_canvas_draw_rect(widget.footer, 0, 0, TILE_SIZE, TILE_SIZE, &bg);
     lv_canvas_draw_text(widget.footer, 0, 1, TILE_SIZE, &title, "CODEX");
+
+    char battery[8];
+    snprintf(battery, sizeof(battery), "%u%%", state.battery);
+    lv_canvas_draw_text(widget.footer, 2, 48, 22, &icon,
+                        state.connected ? LV_SYMBOL_WIFI : LV_SYMBOL_CLOSE);
+    lv_canvas_draw_text(widget.footer, 24, 55, 40, &small, battery);
     rotate_canvas(widget.footer, widget.footer_buf);
 }
+
+static void footer_update_cb(struct codex_footer_state state) { draw_footer(state); }
+
+static struct codex_footer_state footer_get_state(const zmk_event_t *eh) {
+    return (struct codex_footer_state){
+        .battery = zmk_battery_state_of_charge(),
+        .connected = zmk_split_bt_peripheral_is_connected(),
+    };
+}
+
+ZMK_DISPLAY_WIDGET_LISTENER(widget_codex_footer, struct codex_footer_state, footer_update_cb,
+                            footer_get_state)
+ZMK_SUBSCRIPTION(widget_codex_footer, zmk_battery_state_changed);
+ZMK_SUBSCRIPTION(widget_codex_footer, zmk_split_peripheral_status_changed);
 
 static void update_widget(struct zmk_codex_usage_state state) {
     draw_quota(widget.primary, widget.primary_buf, state.primary_duration_hours,
@@ -163,7 +196,7 @@ int zmk_codex_usage_widget_init(lv_obj_t *parent) {
     lv_canvas_set_buffer(widget.footer, widget.footer_buf, TILE_SIZE, TILE_SIZE,
                          LV_IMG_CF_TRUE_COLOR);
 
-    draw_footer();
+    widget_codex_footer_init();
     widget_codex_usage_init();
     return 0;
 }

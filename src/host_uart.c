@@ -9,13 +9,11 @@
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zmk/behavior.h>
-#include <zmk/split/central.h>
+#include <zmk/codex_usage/state.h>
 
 LOG_MODULE_REGISTER(zmk_codex_usage_uart, CONFIG_ZMK_CODEX_USAGE_LOG_LEVEL);
 
 #define UART_NODE DT_CHOSEN(zmk_codex_usage_uart)
-#define CODEX_USAGE_NODE DT_NODELABEL(codex_usage)
 #define FRAME_MAX 40
 
 static const struct device *const uart_dev = DEVICE_DT_GET(UART_NODE);
@@ -94,22 +92,7 @@ static void sync_work_handler(struct k_work *work) {
         return;
     }
 
-    struct zmk_behavior_binding binding = {
-        .behavior_dev = DEVICE_DT_NAME(CODEX_USAGE_NODE),
-        .param1 = param1,
-        .param2 = param2,
-    };
-    struct zmk_behavior_binding_event event = {
-        .position = 0,
-        .source = 0,
-        .timestamp = k_uptime_get(),
-    };
-    err = zmk_split_central_invoke_behavior(0, &binding, event, true);
-    if (err) {
-        LOG_WRN("Could not forward Codex usage to peripheral 0: %d", err);
-        write_reply("CX1,WAIT\n");
-        return;
-    }
+    zmk_codex_usage_set_packed(param1, param2);
     write_reply("CX1,OK\n");
 }
 

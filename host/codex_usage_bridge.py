@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import glob
 import json
 import math
@@ -200,8 +201,13 @@ class SerialPort:
     @staticmethod
     def _open_raw(path: str) -> int:
         fd = os.open(path, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
-        tty.setraw(fd, termios.TCSANOW)
-        termios.tcflush(fd, termios.TCIOFLUSH)
+        try:
+            tty.setraw(fd, termios.TCSANOW)
+            termios.tcflush(fd, termios.TCIOFLUSH)
+        except termios.error as exc:
+            if exc.args[0] != errno.EPERM:
+                os.close(fd)
+                raise
         return fd
 
     @staticmethod

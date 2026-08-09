@@ -3,7 +3,6 @@
 if(CONFIG_ZMK_CODEX_USAGE)
   target_include_directories(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
   target_sources(app PRIVATE
-    src/behavior_codex_usage.c
     src/codex_usage_state.c
     src/events_codex_usage_changed.c
   )

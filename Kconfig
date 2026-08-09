@@ -3,6 +3,7 @@
 menuconfig ZMK_CODEX_USAGE
     bool "Codex usage display"
     depends on ZMK_SPLIT
+    select ZMK_SPLIT_RELAY_EVENT
     help
       Receive Codex rate-limit snapshots from the host and show them on the
       right-hand nice!view display.
@@ -27,6 +28,7 @@ config ZMK_CODEX_USAGE_STATUS_SCREEN
     depends on ZMK_DISPLAY
     select LV_USE_CANVAS
     select LV_FONT_MONTSERRAT_18
+    select LV_FONT_MONTSERRAT_16
     select LV_FONT_MONTSERRAT_14
     select LV_FONT_UNSCII_8
     help

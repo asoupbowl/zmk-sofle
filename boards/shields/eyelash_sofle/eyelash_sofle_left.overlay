@@ -15,12 +15,6 @@
         zmk,codex-usage-uart = &codex_usage_usb_uart;
     };
 
-    behaviors {
-        codex_usage: codex_usage {
-            compatible = "zmk,behavior-codex-usage";
-            #binding-cells = <2>;
-        };
-    };
 };
 
 &zephyr_udc0 {

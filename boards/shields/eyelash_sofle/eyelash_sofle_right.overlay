@@ -8,15 +8,6 @@
 #include "eyelash_sofle.dtsi"
 #include <behaviors/battery_history_request.dtsi>
 
-/ {
-    behaviors {
-        codex_usage: codex_usage {
-            compatible = "zmk,behavior-codex-usage";
-            #binding-cells = <2>;
-        };
-    };
-};
-
 &kscan0 {
     compatible = "zmk,kscan-gpio-matrix";
     row-gpios

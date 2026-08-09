@@ -1,7 +1,10 @@
 import importlib.util
+import errno
 import sys
+import termios
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 MODULE_PATH = Path(__file__).parents[1] / "host" / "codex_usage_bridge.py"
@@ -12,6 +15,16 @@ SPEC.loader.exec_module(bridge)
 
 
 class BridgeTests(unittest.TestCase):
+    @mock.patch.object(bridge.termios, "tcflush")
+    @mock.patch.object(bridge.tty, "setraw")
+    @mock.patch.object(bridge.os, "open", return_value=7)
+    def test_raw_mode_permission_error_uses_cdc_defaults(
+        self, open_mock, setraw_mock, _flush_mock
+    ):
+        setraw_mock.side_effect = termios.error(errno.EPERM, "Operation not permitted")
+        self.assertEqual(bridge.SerialPort._open_raw("/dev/cu.test"), 7)
+        open_mock.assert_called_once()
+
     def test_crc_reference(self):
         self.assertEqual(bridge.crc8(b"123456789"), 0xF4)
 
