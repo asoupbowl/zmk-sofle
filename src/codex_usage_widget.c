@@ -125,21 +125,27 @@ static void draw_quota(lv_obj_t *canvas, lv_color_t buffer[], uint8_t hours, uin
 
 static void draw_footer(struct codex_footer_state state) {
     lv_draw_rect_dsc_t bg;
-    lv_draw_label_dsc_t title;
+    lv_draw_rect_dsc_t fg;
     lv_draw_label_dsc_t icon;
     lv_draw_label_dsc_t small;
     init_rect(&bg, UI_BG);
-    init_label(&title, &lv_font_montserrat_14, LV_TEXT_ALIGN_CENTER);
+    init_rect(&fg, UI_FG);
     init_label(&icon, &lv_font_montserrat_16, LV_TEXT_ALIGN_LEFT);
-    init_label(&small, &lv_font_unscii_8, LV_TEXT_ALIGN_RIGHT);
+    init_label(&small, &lv_font_unscii_8, LV_TEXT_ALIGN_LEFT);
     lv_canvas_draw_rect(widget.footer, 0, 0, TILE_SIZE, TILE_SIZE, &bg);
-    lv_canvas_draw_text(widget.footer, 0, 1, TILE_SIZE, &title, "CODEX");
 
-    char battery[8];
-    snprintf(battery, sizeof(battery), "%u%%", state.battery);
-    lv_canvas_draw_text(widget.footer, 2, 48, 22, &icon,
+    lv_canvas_draw_text(widget.footer, 0, 1, 16, &icon,
                         state.connected ? LV_SYMBOL_WIFI : LV_SYMBOL_CLOSE);
-    lv_canvas_draw_text(widget.footer, 24, 55, 40, &small, battery);
+
+    lv_canvas_draw_rect(widget.footer, 16, 6, 13, 9, &fg);
+    lv_canvas_draw_rect(widget.footer, 17, 7, 11, 7, &bg);
+    lv_canvas_draw_rect(widget.footer, 29, 9, 2, 3, &fg);
+    uint8_t battery_width = (11 * MIN(state.battery, 100)) / 100;
+    if (battery_width > 0) {
+        lv_canvas_draw_rect(widget.footer, 17, 7, battery_width, 7, &fg);
+    }
+
+    lv_canvas_draw_text(widget.footer, 28, 5, 40, &small, "CODEX");
     rotate_canvas(widget.footer, widget.footer_buf);
 }
 
