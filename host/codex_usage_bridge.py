@@ -77,11 +77,14 @@ def pack_snapshot(snapshot: dict[str, Any], now: float | None = None) -> PackedS
 
 def find_codex() -> str:
     configured = os.environ.get("CODEX_BIN")
+    home = Path.home()
     candidates = [
         configured,
         shutil.which("codex"),
         "/Applications/Codex.app/Contents/Resources/codex",
         "/Applications/ChatGPT.app/Contents/Resources/codex",
+        str(home / "Applications/Codex.app/Contents/Resources/codex"),
+        str(home / "Applications/ChatGPT.app/Contents/Resources/codex"),
     ]
     for candidate in candidates:
         if candidate and Path(candidate).is_file():

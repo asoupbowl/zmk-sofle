@@ -1,62 +1,60 @@
-# Sofle
+# Eyelash Sofle：Codex 用量屏幕与 macOS 键位
 
-- [中文](README.md)
-- [English](README_EN.md)
+[English](README_EN.md) · [下载最新发行包](https://github.com/asoupbowl/zmk-sofle/releases/latest) · [中文安装说明](docs/INSTALL.zh-CN.md)
 
-## 更新列表
+这是 Eyelash Sofle ZMK 固件的公开参考实现：右侧 nice!view 显示 Codex 桌面端主配额，电脑通过已配对的加密蓝牙连接每 60 秒无线同步；基础键位和功能层按 macOS 使用习惯整理。
 
-- 2024/12/21
-  1. 增加zmk-studio支持（只需要刷新左手即可使用）。
-- 2024/10/24
-  1. 修改供电模式，功耗降低。
-  2. 修正RGB供电自动关闭的功能。
-- 2025/3/30 增加睡眠进入时间1小时  增加防抖时间 优化睡眠后功耗 
-- 2025/8/22
-  1. 更新了soft off。当您同时按下 Q、S 和 Z 键并按住 2 秒钟时，键盘将进入深度睡眠状态，无法通过按键唤醒。携带外出时可以使用此功能。激活方式为按一次复位开关。
-  2. 这个月，我还更新了矮轴版本sofle和corne的外壳。框架和底板加厚了，复位开关的开口也进行了调整，可以轻松按下复位开关。目前，我们仍在构思如何设计带有倾斜支架的外壳。如果您仔细检查过 PCB，您会注意到有用于扩展 IO 的预留接口。不知道有没有人能够使用它们，我会尝试一下！
-  3. 右侧键盘屏幕上的GIF动画被移除，这将显著降低右侧键盘的功耗。
+## 功能
 
--2026/6/22 键盘支持DYA STUDIO改键了中文用户联系店主索取中文版DYA STUDIO安装包。这个上位机软件改键比ZMK studio更好用。
+- 右屏显示 Codex 剩余百分比、配额窗口、进度条和本地重置时间。
+- 保留 nice!view 原生电池、充电和分体连接状态栏。
+- 日常同步完全无线，不需要 USB。
+- Caps 切换中英文，修饰键为 Control / Option / Command。
+- `MO1` 功能层包含 F1–F12、导航、截图和 RGB 控制。
+- 5 个蓝牙设备槽位；Codex BLE 特征要求已绑定并加密。
+- 不把 Codex 凭据、会话或提示词写入键盘或 GitHub。
 
-> 请更新最新的固件。
->
+## 能否直接使用？
 
-## 联系我
+只有以下硬件组合可以直接刷发行包：
 
-如需3D打印的模型文件或者键盘有任何异常和故障，请联系380465425@qq.com
+- Eyelash Sofle PCB，矩阵与本仓库一致
+- 左右 nice!nano v2
+- 左右 nice!view 160×68
+- 左侧 central、右侧 peripheral
+- macOS 13+ 与已登录的 Codex 桌面端
 
-## Sofle键位图
+不同 PCB、控制器、屏幕或 Windows/Linux 用户请仅参考源码，不要直接刷 UF2。
 
-![Sofle键位图](keymap-drawer/eyelash_sofle.svg)
+## 快速安装
 
-## Codex 用量右屏（本 fork）
+1. 从 [Releases](https://github.com/asoupbowl/zmk-sofle/releases/latest) 下载完整 ZIP 并解压。
+2. 右侧刷 `RIGHT-CODEX-DISPLAY.uf2`，左侧刷 `LEFT-CODEX-KEYMAP.uf2`。
+3. 在 macOS 蓝牙设置连接 `Eyelash Sofle`。
+4. 右键打开 `macOS/Install.command`，并允许蓝牙访问。
 
-本 fork 为 Eyelash Sofle 的右侧 nice!view 增加 Codex 用量页面：
+完整步骤、键位表和故障排查见 [中文安装说明](docs/INSTALL.zh-CN.md)。
 
-- 与 Codex 桌面端保持同一数据维度：显示主配额的剩余百分比、窗口、进度条和本地重置日期/时间。
-- 右屏顶栏保留 nice!view 原生的右侧电池、充电状态和分体无线连接样式；配额窗口与 `LEFT` 同行显示。
-- 左手保留 ZMK/DYA Studio，并可通过加密 BLE GATT 或独立 USB CDC 通道接收 Codex 快照。
-- 左手经 ZMK 蓝牙分体协议把快照转发给右手；账号凭据不会进入键盘。
-- 电脑端桥接程序只调用本机 Codex app-server，默认每 60 秒刷新。
+> `SETTINGS-RESET-EMERGENCY-ONLY.uf2` 会清除蓝牙配对，平时不要刷。
 
-刷入本 fork 生成的左右固件后，可先运行一次验证：
+## 开发与验证
 
-```sh
-python3 host/codex_usage_bridge.py --once
-```
-
-仅检查 Codex 数据而不访问键盘：
+固件由 GitHub Actions 使用 `build.yaml` 构建。Mac 应用可在 macOS 上复现：
 
 ```sh
-python3 host/codex_usage_bridge.py --once --dry-run
-```
-
-桥接程序会用 `CX1?` 握手自动识别专用串口，不会把数据误发给 ZMK Studio 通道。
-macOS 登录自启动模板位于
-`macos/com.openai.eyelash-sofle-codex-usage.plist.template`。
-
-测试：
-
-```sh
+chmod +x macos/build_app.sh
+./macos/build_app.sh dist
 python3 -m unittest discover -s tests -v
 ```
+
+核心目录：
+
+- `config/eyelash_sofle.keymap`：键位和功能层
+- `src/codex_usage_widget.c`：右屏界面
+- `src/host_ble.c`：键盘端加密 BLE 接收
+- `host/codex_usage_bridge.py`：Codex 主配额读取与编码
+- `macos/wireless_bridge.swift`：macOS 蓝牙同步应用
+
+## 上游与致谢
+
+本仓库 fork 自 Eyelash Sofle 配置，并基于 ZMK、nice!view 与 cormoran 的 ZMK 分支。原硬件/外壳与售后信息请参考上游仓库；本 fork 的 Codex 集成是社区参考项目，不是 OpenAI 官方键盘产品。

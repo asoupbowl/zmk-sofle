@@ -64,8 +64,16 @@ final class WirelessBridge: NSObject, CBCentralManagerDelegate, CBPeripheralDele
     private func locateKeyboard() {
         guard central.state == .poweredOn, snapshotCharacteristic == nil else { return }
 
-        let connected = central.retrieveConnectedPeripherals(withServices: [serviceUUID])
-        if let peripheral = connected.first {
+        let customServiceMatches = central.retrieveConnectedPeripherals(withServices: [serviceUUID])
+        if let peripheral = customServiceMatches.first {
+            connect(peripheral)
+            return
+        }
+
+        let hidMatches = central.retrieveConnectedPeripherals(withServices: [hidServiceUUID])
+        if let peripheral = hidMatches.first(where: {
+            $0.name?.localizedCaseInsensitiveContains("sofle") == true
+        }) {
             connect(peripheral)
             return
         }
@@ -196,9 +204,22 @@ final class WirelessBridge: NSObject, CBCentralManagerDelegate, CBPeripheralDele
                                     userInfo: [NSLocalizedDescriptionKey: "Bundled bridge script is missing"]))
         }
 
+        let pythonCandidates = [
+            ProcessInfo.processInfo.environment["PYTHON3"],
+            "/usr/bin/python3",
+            "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3",
+        ]
+        guard let python = pythonCandidates.compactMap({ $0 }).first(where: {
+            FileManager.default.isExecutableFile(atPath: $0)
+        }) else {
+            return .failure(NSError(domain: "EyelashSofleCodex", code: 4,
+                                    userInfo: [NSLocalizedDescriptionKey: "Python 3 was not found"]))
+        }
+
         let process = Process()
         let output = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+        process.executableURL = URL(fileURLWithPath: python)
         process.arguments = [script.path, "--once", "--dry-run"]
         process.standardOutput = output
         process.standardError = output

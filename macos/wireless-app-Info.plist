@@ -7,10 +7,12 @@
   <key>CFBundleExecutable</key>
   <string>EyelashSofleCodex</string>
   <key>CFBundleIdentifier</key>
-  <string>com.openai.eyelash-sofle-codex-wireless</string>
+  <string>com.asoupbowl.eyelash-sofle-codex-wireless</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
+  <string>Eyelash Sofle Codex Usage</string>
+  <key>CFBundleDisplayName</key>
   <string>Eyelash Sofle Codex Usage</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
@@ -21,6 +23,8 @@
   <key>LSMinimumSystemVersion</key>
   <string>13.0</string>
   <key>LSUIElement</key>
+  <true/>
+  <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSBluetoothAlwaysUsageDescription</key>
   <string>通过蓝牙把本机 Codex 剩余用量同步到 Eyelash Sofle 键盘右屏。</string>

@@ -1,0 +1,114 @@
+name: Publish share package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex-usage
+    paths:
+      - release/VERSION
+
+permissions:
+  contents: write
+
+jobs:
+  firmware:
+    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3.0
+
+  package:
+    needs: firmware
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download firmware artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: dist/firmware-raw
+
+      - name: Build universal macOS helper
+        shell: zsh {0}
+        run: |
+          version="$(tr -d '[:space:]' < release/VERSION)"
+          chmod +x macos/build_app.sh macos/Install.command
+          APP_VERSION="${version#codex-v}" APP_BUILD_NUMBER="$GITHUB_RUN_NUMBER" \
+            ./macos/build_app.sh dist/macos
+          cp macos/Install.command dist/macos/Install.command
+
+      - name: Assemble release package
+        shell: zsh {0}
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < release/VERSION)"
+          package="dist/Eyelash-Sofle-Codex-$version"
+          mkdir -p "$package/firmware" "$package/macOS"
+
+          left="$(find dist/firmware-raw -type f -name '*left*uf2' -print -quit)"
+          right="$(find dist/firmware-raw -type f -name '*right*uf2' -print -quit)"
+          reset="$(find dist/firmware-raw -type f -name '*settings_reset*uf2' -print -quit)"
+          test -n "$left" && test -n "$right" && test -n "$reset"
+
+          cp "$left" "$package/firmware/LEFT-CODEX-KEYMAP.uf2"
+          cp "$right" "$package/firmware/RIGHT-CODEX-DISPLAY.uf2"
+          cp "$reset" "$package/firmware/SETTINGS-RESET-EMERGENCY-ONLY.uf2"
+          ditto 'dist/macos/Eyelash Sofle Codex Usage.app' \
+            "$package/macOS/Eyelash Sofle Codex Usage.app"
+          cp dist/macos/Install.command "$package/macOS/Install.command"
+          chmod +x "$package/macOS/Install.command"
+          cp docs/INSTALL.zh-CN.md "$package/README-FIRST-zh-CN.md"
+          cp docs/INSTALL.en.md "$package/README-FIRST-en.md"
+
+          ditto -c -k --sequesterRsrc --keepParent "$package" \
+            "dist/Eyelash-Sofle-Codex-$version.zip"
+          ditto -c -k --sequesterRsrc --keepParent \
+            'dist/macos/Eyelash Sofle Codex Usage.app' \
+            "dist/Eyelash-Sofle-Codex-Usage-macOS-$version.zip"
+
+          cp "$package/firmware/LEFT-CODEX-KEYMAP.uf2" dist/LEFT-CODEX-KEYMAP.uf2
+          cp "$package/firmware/RIGHT-CODEX-DISPLAY.uf2" dist/RIGHT-CODEX-DISPLAY.uf2
+          cp "$package/firmware/SETTINGS-RESET-EMERGENCY-ONLY.uf2" \
+            dist/SETTINGS-RESET-EMERGENCY-ONLY.uf2
+
+          cd dist
+          shasum -a 256 \
+            "Eyelash-Sofle-Codex-$version.zip" \
+            "Eyelash-Sofle-Codex-Usage-macOS-$version.zip" \
+            LEFT-CODEX-KEYMAP.uf2 \
+            RIGHT-CODEX-DISPLAY.uf2 \
+            SETTINGS-RESET-EMERGENCY-ONLY.uf2 > SHA256SUMS.txt
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: share-package
+          path: |
+            dist/Eyelash-Sofle-Codex-*.zip
+            dist/LEFT-CODEX-KEYMAP.uf2
+            dist/RIGHT-CODEX-DISPLAY.uf2
+            dist/SETTINGS-RESET-EMERGENCY-ONLY.uf2
+            dist/SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: zsh {0}
+        run: |
+          version="$(tr -d '[:space:]' < release/VERSION)"
+          assets=(
+            "dist/Eyelash-Sofle-Codex-$version.zip"
+            "dist/Eyelash-Sofle-Codex-Usage-macOS-$version.zip"
+            dist/LEFT-CODEX-KEYMAP.uf2
+            dist/RIGHT-CODEX-DISPLAY.uf2
+            dist/SETTINGS-RESET-EMERGENCY-ONLY.uf2
+            dist/SHA256SUMS.txt
+          )
+          if gh release view "$version" >/dev/null 2>&1; then
+            gh release upload "$version" "${assets[@]}" --clobber
+          else
+            gh release create "$version" "${assets[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "Eyelash Sofle Codex $version" \
+              --notes-file release/RELEASE_NOTES.md \
+              --latest
+          fi
