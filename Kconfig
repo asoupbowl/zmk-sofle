@@ -23,6 +23,13 @@ config ZMK_CODEX_USAGE_HOST_UART
       Parse CX1 frames from the zmk,codex-usage-uart chosen device and forward
       them to split peripheral 0.
 
+config ZMK_CODEX_USAGE_HOST_BLE
+    bool "Receive snapshots over an encrypted Bluetooth GATT characteristic"
+    depends on ZMK_SPLIT_ROLE_CENTRAL && ZMK_BLE
+    help
+      Let the bonded host write Codex usage snapshots over the keyboard's
+      existing Bluetooth connection, then relay them to the right half.
+
 config ZMK_CODEX_USAGE_STATUS_SCREEN
     bool "Use the Codex usage status screen"
     depends on ZMK_DISPLAY

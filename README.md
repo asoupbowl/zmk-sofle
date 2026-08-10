@@ -35,7 +35,7 @@
 
 - 与 Codex 桌面端保持同一数据维度：显示主配额的剩余百分比、窗口、进度条和本地重置日期/时间。
 - 右屏顶栏保留 nice!view 原生的右侧电池、充电状态和分体无线连接样式；配额窗口与 `LEFT` 同行显示。
-- 左手保留 ZMK/DYA Studio，并新增一个独立 USB CDC 通道接收 Codex 快照。
+- 左手保留 ZMK/DYA Studio，并可通过加密 BLE GATT 或独立 USB CDC 通道接收 Codex 快照。
 - 左手经 ZMK 蓝牙分体协议把快照转发给右手；账号凭据不会进入键盘。
 - 电脑端桥接程序只调用本机 Codex app-server，默认每 60 秒刷新。
 

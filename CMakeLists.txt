@@ -7,6 +7,7 @@ if(CONFIG_ZMK_CODEX_USAGE)
     src/events_codex_usage_changed.c
   )
   target_sources_ifdef(CONFIG_ZMK_CODEX_USAGE_HOST_UART app PRIVATE src/host_uart.c)
+  target_sources_ifdef(CONFIG_ZMK_CODEX_USAGE_HOST_BLE app PRIVATE src/host_ble.c)
   target_sources_ifdef(CONFIG_ZMK_CODEX_USAGE_STATUS_SCREEN app PRIVATE
     src/codex_bolt.c
     src/codex_usage_widget.c
