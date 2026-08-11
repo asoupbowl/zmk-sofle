@@ -40,7 +40,10 @@ final class WirelessBridge: NSObject, CBCentralManagerDelegate, CBPeripheralDele
     private var snapshotCharacteristic: CBCharacteristic?
     private var reconnectTimer: Timer?
     private var syncTimer: Timer?
+    private var wakeObserver: NSObjectProtocol?
     private var queryInFlight = false
+    private var connectionGeneration: UInt = 0
+    private var bluetoothNeedsRecovery = false
     private let logger = BridgeLogger.shared
 
     override init() {
@@ -52,17 +55,72 @@ final class WirelessBridge: NSObject, CBCentralManagerDelegate, CBPeripheralDele
         syncTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.syncNow()
         }
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.recoverAfterWake()
+        }
+    }
+
+    deinit {
+        reconnectTimer?.invalidate()
+        syncTimer?.invalidate()
+        if let wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
+        }
     }
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         logger.write("Bluetooth state=\(central.state.rawValue) authorization=\(CBCentralManager.authorization.rawValue)")
-        if central.state == .poweredOn {
-            locateKeyboard()
+        guard central.state == .poweredOn else {
+            bluetoothNeedsRecovery = true
+            clearConnectionState(cancelPeripheral: false)
+            return
+        }
+
+        if bluetoothNeedsRecovery {
+            bluetoothNeedsRecovery = false
+            if central.isScanning {
+                central.stopScan()
+            }
+            logger.write("Bluetooth became available; reconnecting to the Sofle keyboard")
+        }
+        locateKeyboard()
+    }
+
+    private func recoverAfterWake() {
+        logger.write("Mac woke from sleep; refreshing the Sofle connection")
+        if central.isScanning {
+            central.stopScan()
+        }
+        clearConnectionState(cancelPeripheral: true)
+        locateKeyboard()
+    }
+
+    private func clearConnectionState(cancelPeripheral: Bool) {
+        connectionGeneration &+= 1
+        queryInFlight = false
+        snapshotCharacteristic = nil
+
+        let previousKeyboard = keyboard
+        keyboard = nil
+        if cancelPeripheral,
+           central.state == .poweredOn,
+           let previousKeyboard,
+           previousKeyboard.state != .disconnected {
+            central.cancelPeripheralConnection(previousKeyboard)
         }
     }
 
     private func locateKeyboard() {
-        guard central.state == .poweredOn, snapshotCharacteristic == nil else { return }
+        guard central.state == .poweredOn else { return }
+
+        if let keyboard, keyboard.state != .connected {
+            clearConnectionState(cancelPeripheral: false)
+        }
+        guard snapshotCharacteristic == nil else { return }
 
         let customServiceMatches = central.retrieveConnectedPeripherals(withServices: [serviceUUID])
         if let peripheral = customServiceMatches.first {
@@ -123,8 +181,7 @@ final class WirelessBridge: NSObject, CBCentralManagerDelegate, CBPeripheralDele
         error: Error?
     ) {
         logger.write("Connection failed: \(error?.localizedDescription ?? "unknown error")")
-        keyboard = nil
-        snapshotCharacteristic = nil
+        clearConnectionState(cancelPeripheral: false)
     }
 
     func centralManager(
@@ -133,8 +190,7 @@ final class WirelessBridge: NSObject, CBCentralManagerDelegate, CBPeripheralDele
         error: Error?
     ) {
         logger.write("Disconnected: \(error?.localizedDescription ?? "normal")")
-        keyboard = nil
-        snapshotCharacteristic = nil
+        clearConnectionState(cancelPeripheral: false)
         locateKeyboard()
     }
 
@@ -163,6 +219,7 @@ final class WirelessBridge: NSObject, CBCentralManagerDelegate, CBPeripheralDele
             logger.write("Codex snapshot characteristic was not found")
             return
         }
+        connectionGeneration &+= 1
         snapshotCharacteristic = characteristic
         logger.write("Wireless Codex channel is ready")
         syncNow()
@@ -175,11 +232,18 @@ final class WirelessBridge: NSObject, CBCentralManagerDelegate, CBPeripheralDele
               let characteristic = snapshotCharacteristic else { return }
 
         queryInFlight = true
+        let generation = connectionGeneration
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let result = self?.readSnapshot()
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.queryInFlight = false
+                guard generation == self.connectionGeneration,
+                      self.keyboard === peripheral,
+                      peripheral.state == .connected,
+                      self.snapshotCharacteristic === characteristic else {
+                    return
+                }
                 switch result {
                 case .success(let payload):
                     let type: CBCharacteristicWriteType = characteristic.properties.contains(.write)

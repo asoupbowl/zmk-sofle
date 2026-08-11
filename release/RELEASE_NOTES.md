@@ -1,4 +1,17 @@
-# Eyelash Sofle Codex public reference release
+# Eyelash Sofle Codex v1.1.0
+
+This maintenance release updates the macOS helper. Keyboard firmware is unchanged from v1.0.0.
+
+Fixes:
+
+- reconnect automatically after the Mac sleeps or Bluetooth temporarily becomes unavailable
+- discard stale BLE characteristics before reconnecting
+- sync immediately after reconnection, then continue refreshing every 60 seconds
+- ignore an in-flight usage result if it belongs to an old Bluetooth connection
+
+The Codex desktop window does not need to remain open. The Mac must be awake and signed in.
+
+## Included configuration
 
 This release packages the tested configuration for the exact Eyelash Sofle + nice!nano v2 + dual nice!view hardware combination.
 

@@ -65,10 +65,13 @@
 
 电脑端每 60 秒读取一次本机 Codex app-server，并通过加密的已配对 BLE 连接发送 8 字节快照。账号凭据、会话内容和提示词不会写入键盘，也不会上传到本仓库。
 
+Codex 桌面窗口不需要保持打开。Mac 从睡眠中唤醒或蓝牙短暂关闭后，同步助手会自动重新连接、立即同步一次，然后继续每 60 秒刷新。Mac 必须处于唤醒状态，并保持 Codex 账号登录。
+
 ## 故障排查
 
 - **Finder 复制 UF2 报错 -36**：打开终端，使用 `cp 固件路径 /Volumes/NICENANO/`。
 - **键盘能输入但右屏没有 Codex 用量**：忘记该蓝牙设备并重新配对一次，然后重新打开同步应用。
+- **Mac 唤醒后暂时没有用量**：V1.1 会自动重新连接；保持键盘开启，通常数秒内恢复。可查看日志确认出现 `Wireless Codex channel is ready`。
 - **没有蓝牙授权提示**：在“系统设置 → 隐私与安全性 → 蓝牙”中允许 Eyelash Sofle Codex Usage。
 - **应用没有窗口**：正常。它是登录后台程序。
 - **检查日志**：`~/Library/Logs/Eyelash Sofle Codex Usage/wireless.log`。

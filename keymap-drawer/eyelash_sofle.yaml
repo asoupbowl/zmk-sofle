@@ -27,7 +27,7 @@ layers:
   - O
   - P
   - {t: \, s: '|'}
-  - Ctl+$$mdi:keyboard-space$$
+  - $$mdi:apple-keyboard-caps$$
   - A
   - S
   - D
@@ -55,16 +55,16 @@ layers:
   - {t: '$$mdi:keyboard-return$$', type: enter}
   - $$mdi:volume-off$$
   - $$mdi:apple-keyboard-control$$
-  - $$mdi:apple-keyboard-option$$
   - $$mdi:apple-keyboard-command$$
+  - $$mdi:apple-keyboard-option$$
   - LAYER1
   - $$mdi:keyboard-space$$
   - {t: '$$mdi:keyboard-return$$', type: enter}
   - $$mdi:keyboard-space$$
-  - {t: '-', s: _}
-  - {t: '=', h: LAYER2, s: +}
-  - {t: '[', s: '{'}
-  - {t: ']', s: '}'}
+  - {t: '$$mdi:keyboard-return$$', type: enter}
+  - LAYER2
+  - $$mdi:apple-keyboard-shift$$
+  - $$mdi:backspace-reverse-outline$$
   LAYER1:
   - {t: '`', s: '~'}
   - F1
@@ -78,23 +78,23 @@ layers:
   - F8
   - F9
   - F10
-  - $$mdi:backspace-reverse-outline$$
   - {t: '$$mdi:transfer$$', type: trans}
   - {t: '$$mdi:transfer$$', type: trans}
+  - {t: '`', s: '~'}
   - $$mdi:mouse-left-click-outline$$
   - $$mdi:mouse-scroll-wheel$$
   - $$mdi:mouse-right-click-outline$$
   - '&mkp MB4'
   - {t: '$$mdi:menu-down$$', s: '$$mdi:mouse$$'}
   - PG UP
-  - HOME
-  - $$mdi:arrow-up-bold$$
   - END
+  - $$mdi:arrow-up-bold$$
+  - HOME
+  - {t: '-', s: _}
+  - {t: '=', s: +}
   - {t: '$$mdi:transfer$$', type: trans}
+  - '~'
   - {t: '$$mdi:transfer$$', type: trans}
-  - {t: '$$mdi:transfer$$', type: trans}
-  - {t: Gui+Sft+3, s: Gui+Sft+#}
-  - {t: Gui+Sft+4, s: Gui+Sft+$}
   - {t: '$$mdi:transfer$$', type: trans}
   - {t: '$$mdi:transfer$$', type: trans}
   - '&mkp MB5'
@@ -103,20 +103,20 @@ layers:
   - $$mdi:arrow-left-bold$$
   - $$mdi:arrow-down-bold$$
   - $$mdi:arrow-right-bold$$
-  - {t: '$$mdi:transfer$$', type: trans}
-  - {t: '$$mdi:transfer$$', type: trans}
+  - {t: '[', s: '{'}
+  - {t: ']', s: '}'}
   - {t: '$$mdi:transfer$$', type: trans}
   - RGB OFF
   - RGB ON
   - RGB EFF
   - RGB EFR
-  - {t: '$$mdi:transfer$$', type: trans}
+  - RGB SPI
   - {t: '$$mdi:menu-right$$', s: '$$mdi:mouse$$'}
   - RGB BRI
   - RGB BRD
-  - RGB SPD
-  - RGB SPI
-  - {t: '$$mdi:transfer$$', type: trans}
+  - Ins
+  - F11
+  - F12
   - {t: '$$mdi:transfer$$', type: trans}
   - $$mdi:volume-off$$
   - {t: '$$mdi:transfer$$', type: trans}
@@ -126,8 +126,8 @@ layers:
   - {t: '$$mdi:transfer$$', type: trans}
   - $$mdi:mouse-left-click-outline$$
   - {t: '$$mdi:transfer$$', type: trans}
-  - F11
-  - F12
+  - {t: '$$mdi:transfer$$', type: trans}
+  - {t: '$$mdi:transfer$$', type: trans}
   - {t: '$$mdi:transfer$$', type: trans}
   - {t: '$$mdi:transfer$$', type: trans}
   LAYER2:

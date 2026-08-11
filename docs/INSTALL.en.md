@@ -65,10 +65,13 @@ The right display mirrors the main Codex desktop quota:
 
 Every 60 seconds the Mac helper reads the local Codex app-server and sends an 8-byte snapshot over the encrypted, bonded BLE connection. Account credentials, conversation content, and prompts are never stored on the keyboard or committed to this repository.
 
+The Codex desktop window does not need to remain open. After the Mac wakes or Bluetooth temporarily becomes unavailable, the helper reconnects automatically, syncs immediately, and then resumes the 60-second refresh cycle. The Mac must be awake and the Codex account must remain signed in.
+
 ## Troubleshooting
 
 - **Finder reports error -36 while copying UF2**: use `cp firmware-path /Volumes/NICENANO/` in Terminal.
 - **Typing works but Codex usage is missing**: forget the Bluetooth device, pair it once more, then reopen the helper app.
+- **Usage is briefly missing after wake**: V1.1 reconnects automatically; keep the keyboard on and it should recover within a few seconds. The log should show `Wireless Codex channel is ready`.
 - **No Bluetooth permission prompt**: allow Eyelash Sofle Codex Usage in System Settings → Privacy & Security → Bluetooth.
 - **The app has no window**: this is expected; it is a login background app.
 - **Log file**: `~/Library/Logs/Eyelash Sofle Codex Usage/wireless.log`.
